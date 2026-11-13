@@ -2,39 +2,22 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"sync/atomic"
-	"time"
-	"uuid"
 
 	"github.com/32bytess/chirpy/internal/database"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
-type apiConfig struct {
-	fileserverHits atomic.Int32
-	DB             *database.Queries
-	Platform       string
-}
-
-type User struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
-}
-
 func main() {
 	_ = godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
-		fmt.Printf("db err: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("db err: %v\n", err)
 	}
 
 	cfg := apiConfig{
@@ -43,19 +26,25 @@ func main() {
 		Platform:       os.Getenv("PLATFORM"),
 	}
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/healthz", handlerHealthz)
+
+	// app
 	handlerHome := http.StripPrefix("/app", http.FileServer(http.Dir("app/")))
 	mux.Handle("/app/", cfg.middlewareMetricsInc(handlerHome))
+
+	// admin
 	mux.HandleFunc("GET /admin/metrics", cfg.handlerMetrics)
+	mux.HandleFunc("POST /admin/reset", cfg.handlerReset)
+
+	// api
+	mux.HandleFunc("GET /api/healthz", handlerHealthz)
+	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
 	mux.HandleFunc("POST /api/user", cfg.handlerCreateUser)
+
 	port := os.Getenv("PORT")
 	srv := &http.Server{
 		Addr:    ":" + port,
 		Handler: mux,
 	}
-	mux.HandleFunc("POST /admin/reset", cfg.handlerReset)
-
-	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
 
 	log.Fatal(srv.ListenAndServe())
 }
