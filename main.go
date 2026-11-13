@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"sync/atomic"
+	"time"
+	"uuid"
 
 	"github.com/32bytess/chirpy/internal/database"
 	"github.com/joho/godotenv"
@@ -16,6 +18,14 @@ import (
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	DB             *database.Queries
+	Platform       string
+}
+
+type User struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
 }
 
 func main() {
@@ -30,6 +40,7 @@ func main() {
 	cfg := apiConfig{
 		fileserverHits: atomic.Int32{},
 		DB:             database.New(db),
+		Platform:       os.Getenv("PLATFORM"),
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/healthz", handlerHealthz)
