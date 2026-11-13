@@ -50,19 +50,17 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (cfg *apiConfig) handlerMetrics() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html")
-		w.WriteHeader(200)
-		html := `<html>
+func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(200)
+	html := `<html>
   <body>
     <h1>Welcome, Chirpy Admin</h1>
     <p>Chirpy has been visited %d times!</p>
   </body>
 </html>`
-		val := fmt.Sprintf(html, cfg.fileserverHits.Load())
-		w.Write([]byte(val))
-	}
+	val := fmt.Sprintf(html, cfg.fileserverHits.Load())
+	w.Write([]byte(val))
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.HandlerFunc {
@@ -76,12 +74,31 @@ func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
 	cfg.fileserverHits.Swap(0)
 }
 
+func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) {
+	params := struct {
+		Email string `json:"email"`
+	}{}
+
+	err := json.NewDecoder(r.Body).Decode(&params)
+	if err != nil {
+		respondWithError(w, 500, "Something went wrong", err)
+		return
+	}
+
+	user, err := cfg.DB.CreateUser(r.Context(), params.Email)
+	if err != nil {
+		respondWithError(w, 400, "User didnt get created", err)
+		return
+	}
+	respondWithJSON(w, 201, user)
+}
+
 // helpers
 
 func respondWithError(w http.ResponseWriter, code int, msg string, err error) {
 	w.Header().Add("Content-Type", "application/json")
 	if err != nil {
-		log.Printf("Error decoding params: %s", err)
+		log.Printf(" err: %s", err)
 	}
 	type ErrorMessage struct {
 		Message string `json:"error"`
