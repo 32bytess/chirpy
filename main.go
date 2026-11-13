@@ -37,8 +37,8 @@ func main() {
 
 	// api
 	mux.HandleFunc("GET /api/healthz", handlerHealthz)
-	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
 	mux.HandleFunc("POST /api/user", cfg.handlerCreateUser)
+	mux.HandleFunc("POST /api/chirp", cfg.handlerCreateChirp)
 
 	port := os.Getenv("PORT")
 	srv := &http.Server{

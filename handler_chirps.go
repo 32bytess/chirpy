@@ -2,24 +2,31 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strings"
+
+	"github.com/32bytess/chirpy/internal/database"
+	"github.com/google/uuid"
 )
 
-func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
 	type params struct {
-		Body string `json:"body"`
+		Body   string `json:"body"`
+		UserID string `json:"user_id"`
 	}
-	decoder := json.NewDecoder(r.Body)
 	p := params{}
-	err := decoder.Decode(&p)
+
+	err := json.NewDecoder(r.Body).Decode(&p)
 	if err != nil {
 		respondWithError(w, 400, "Couldn't decode params", err)
 		return
 	}
+	if len(p.Body) == 0 {
+		respondWithError(w, 400, "body can't be nil", err)
+		return
+	}
+
 	if len(p.Body) > 140 {
-		log.Printf("Chirp too long")
 		respondWithError(w, 400, "Chirp is too long", nil)
 		return
 	}
@@ -37,9 +44,24 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	cleanedBody := strings.Join(words, " ")
-	respondWithJSON(w, 200, struct {
-		CleanedBody string `json:"cleaned_body"`
-	}{
-		CleanedBody: cleanedBody,
+	userID, err := uuid.Parse(p.UserID)
+	if err != nil {
+		respondWithError(w, 400, "Unvalid user id", err)
+		return
+	}
+	chirp, err := cfg.DB.CreateChirp(r.Context(), database.CreateChirpParams{
+		Body:   cleanedBody,
+		UserID: userID,
+	})
+	if err != nil {
+		respondWithError(w, 400, "Chirp didnt get created", err)
+		return
+	}
+	respondWithJSON(w, 201, Chirp{
+		ID:        chirp.ID,
+		CreatedAt: chirp.CreatedAt,
+		UpdatedAt: chirp.UpdatedAt,
+		Body:      chirp.Body,
+		UserID:    chirp.UserID,
 	})
 }
