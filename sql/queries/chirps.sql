@@ -5,3 +5,11 @@ values
   (gen_random_uuid(), now(), now(), $1, $2)
 returning
   *;
+
+-- name: GetAllChirps :many
+select
+  *
+from
+  chirps
+order by
+  created_at asc;
