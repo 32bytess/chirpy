@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/32bytess/chirpy/internal/auth"
 	"github.com/32bytess/chirpy/internal/database"
@@ -52,8 +53,9 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 
 func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	params := struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email            string `json:"email"`
+		Password         string `json:"password"`
+		ExpiresInSeconds int    `json:"expires_in_seconds"`
 	}{}
 
 	err := json.NewDecoder(r.Body).Decode(&params)
@@ -82,10 +84,21 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusUnauthorized, "Unvalid Password", nil)
 		return
 	}
+	expiredIn := time.Hour
+	if params.ExpiresInSeconds != 0 {
+		expiredIn = time.Second * time.Duration(params.ExpiresInSeconds)
+	}
+	id := uuid.UUID(user.ID)
+	token, err := auth.MakeJWT(id, cfg.TokenSecret, expiredIn)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Something went wrong", err)
+		return
+	}
 	respondWithJSON(w, 200, User{
-		ID:        uuid.UUID(user.ID),
+		ID:        id,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
 		Email:     user.Email,
+		Token:     token,
 	})
 }
