@@ -53,9 +53,8 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 
 func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	params := struct {
-		Email            string `json:"email"`
-		Password         string `json:"password"`
-		ExpiresInSeconds int    `json:"expires_in_seconds"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}{}
 
 	err := json.NewDecoder(r.Body).Decode(&params)
@@ -84,21 +83,28 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusUnauthorized, "Unvalid Password", nil)
 		return
 	}
-	expiredIn := time.Hour
-	if params.ExpiresInSeconds != 0 {
-		expiredIn = time.Second * time.Duration(params.ExpiresInSeconds)
-	}
 	id := uuid.UUID(user.ID)
-	token, err := auth.MakeJWT(id, cfg.TokenSecret, expiredIn)
+	token, err := auth.MakeJWT(id, cfg.TokenSecret, time.Hour)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Something went wrong", err)
+		return
+	}
+	refreshToken := auth.MakeRefreshToken()
+	_, err = cfg.DB.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+		Token:     refreshToken,
+		UserID:    id,
+		ExpiresAt: time.Now().Add(time.Hour * 24 * 60),
+	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Something went wrong", err)
 		return
 	}
 	respondWithJSON(w, 200, User{
-		ID:        id,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
-		Token:     token,
+		ID:           id,
+		CreatedAt:    user.CreatedAt,
+		UpdatedAt:    user.UpdatedAt,
+		Email:        user.Email,
+		Token:        token,
+		RefreshToken: refreshToken,
 	})
 }
