@@ -25,6 +25,7 @@ func main() {
 		DB:             database.New(db),
 		Platform:       os.Getenv("PLATFORM"),
 		TokenSecret:    os.Getenv("TOKEN_SECRET"),
+		PolkaKey:       os.Getenv("POLKA_KEY"),
 	}
 	mux := http.NewServeMux()
 
@@ -42,7 +43,7 @@ func main() {
 	mux.HandleFunc("PUT /api/users", cfg.middlewareAccessToken(cfg.handlerUpdateUser))
 	mux.HandleFunc("POST /api/login", cfg.handlerLogin)
 	mux.HandleFunc("POST /api/chirps", cfg.middlewareAccessToken(cfg.handlerCreateChirp))
-	mux.HandleFunc("GET /api/chirps", cfg.handlerGetAllChirps)
+	mux.HandleFunc("GET /api/chirps", cfg.handlerGetChirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", cfg.handlerGetChirp)
 	mux.HandleFunc("DELETE /api/chirps/{chirpID}", cfg.middlewareAccessToken(cfg.handlerDeleteChirp))
 	mux.HandleFunc("POST /api/refresh", cfg.handlerRefreshToken)

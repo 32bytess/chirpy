@@ -159,8 +159,18 @@ func (cfg *apiConfig) handlerPolkaWebhook(w http.ResponseWriter, r *http.Request
 		} `json:"data"`
 	}{}
 
-	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
-		respondWithError(w, http.StatusBadRequest, "Unvalid inputs ", err)
+	apiKey, err := auth.GetApiKey(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized", err)
+		return
+	}
+	if apiKey != cfg.PolkaKey {
+		respondWithError(w, http.StatusUnauthorized, "Invalid api key", nil)
+		return
+	}
+
+	if err = json.NewDecoder(r.Body).Decode(&params); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid inputs ", err)
 		return
 	}
 	if params.Event != "user.upgraded" {
