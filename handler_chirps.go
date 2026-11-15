@@ -5,12 +5,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/32bytess/chirpy/internal/auth"
 	"github.com/32bytess/chirpy/internal/database"
 	"github.com/google/uuid"
 )
 
-func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request, userID uuid.UUID) {
 	type params struct {
 		Body string `json:"body"`
 	}
@@ -21,18 +20,8 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	token, err := auth.GetBearerToken(r.Header)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Unauthorized", err)
-		return
-	}
-	userID, err := auth.ValidateJWT(token, cfg.TokenSecret)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Unauthorized", err)
-		return
-	}
 	if len(p.Body) == 0 {
-		respondWithError(w, 400, "body can't be nil", err)
+		respondWithError(w, 400, "body can't be nil", nil)
 		return
 	}
 

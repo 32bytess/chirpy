@@ -99,12 +99,50 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "Something went wrong", err)
 		return
 	}
-	respondWithJSON(w, 200, User{
+	respondWithJSON(w, 200, UserWithToken{
 		ID:           id,
 		CreatedAt:    user.CreatedAt,
 		UpdatedAt:    user.UpdatedAt,
 		Email:        user.Email,
 		Token:        token,
 		RefreshToken: refreshToken,
+	})
+}
+
+func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request, userID uuid.UUID) {
+	params := struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}{}
+
+	err := json.NewDecoder(r.Body).Decode(&params)
+	if err != nil {
+		respondWithError(w, 400, "Couldn't decode params", err)
+		return
+	}
+
+	if len(params.Email) == 0 || len(params.Password) == 0 {
+		respondWithError(w, http.StatusBadRequest, "Unvalid inputs", nil)
+		return
+	}
+	hashedPass, err := auth.HashPassword(params.Password)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Something went wrong", err)
+		return
+	}
+	user, err := cfg.DB.UpdateUser(r.Context(), database.UpdateUserParams{
+		ID:       userID,
+		Email:    params.Email,
+		Password: hashedPass,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Something went wrong", err)
+		return
+	}
+	respondWithJSON(w, 200, User{
+		ID:        userID,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+		Email:     user.Email,
 	})
 }
