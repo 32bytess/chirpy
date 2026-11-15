@@ -11,3 +11,11 @@ values
   ($1, now(), now(), $2, $3)
 returning
   *;
+
+-- name: GetRefreshTokenByToken :one
+select
+  *
+from
+  refresh_tokens
+where
+  token = $1;
