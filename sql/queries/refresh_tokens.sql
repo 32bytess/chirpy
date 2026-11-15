@@ -19,3 +19,11 @@ from
   refresh_tokens
 where
   token = $1;
+
+-- name: RevokeToken :exec
+update refresh_tokens
+set
+  revoked_at = now(),
+  updated_at = now()
+where
+  token = $1;
