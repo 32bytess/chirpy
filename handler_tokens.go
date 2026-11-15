@@ -10,12 +10,12 @@ import (
 func (cfg *apiConfig) handlerRefreshToken(w http.ResponseWriter, r *http.Request) {
 	token, err := auth.GetBearerToken(r.Header)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Unvalid token", err)
+		respondWithError(w, http.StatusUnauthorized, "Invalid token", err)
 		return
 	}
 	refreshToken, err := cfg.DB.GetRefreshTokenByToken(r.Context(), token)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Unauthorized", err)
+		respondWithError(w, http.StatusInternalServerError, "Something went wrong", err)
 		return
 	}
 	if refreshToken.ExpiresAt.Before(time.Now()) || refreshToken.RevokedAt.Valid {

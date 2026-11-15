@@ -113,7 +113,7 @@ func (cfg *apiConfig) handlerDeleteChirp(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	if userID != chirp.UserID {
-		respondWithError(w, http.StatusUnauthorized, "Only the Owner can delete the chirp", nil)
+		respondWithError(w, http.StatusForbidden, "Only the Owner can delete the chirp", nil)
 		return
 	}
 	err = cfg.DB.DeleteChirp(r.Context(), parsedChirpID)

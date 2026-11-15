@@ -17,7 +17,7 @@ insert into
 values
   (gen_random_uuid(), now(), now(), $1, $2)
 returning
-  id, created_at, updated_at, email, password
+  id, created_at, updated_at, email, password, is_chirpy_red
 `
 
 type CreateUserParams struct {
@@ -34,6 +34,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.UpdatedAt,
 		&i.Email,
 		&i.Password,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
@@ -49,7 +50,7 @@ func (q *Queries) DeleteAllUsers(ctx context.Context) error {
 
 const getUserByEmail = `-- name: GetUserByEmail :one
 select
-  id, created_at, updated_at, email, password
+  id, created_at, updated_at, email, password, is_chirpy_red
 from
   users
 where
@@ -65,6 +66,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.UpdatedAt,
 		&i.Email,
 		&i.Password,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
@@ -78,7 +80,7 @@ set
 where
   id = $1
 returning
-  id, created_at, updated_at, email, password
+  id, created_at, updated_at, email, password, is_chirpy_red
 `
 
 type UpdateUserParams struct {
@@ -96,6 +98,24 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.UpdatedAt,
 		&i.Email,
 		&i.Password,
+		&i.IsChirpyRed,
 	)
 	return i, err
+}
+
+const upgradeUserToChirpyRed = `-- name: UpgradeUserToChirpyRed :execrows
+update users
+set
+  is_chirpy_red = true,
+  updated_at = now()
+where
+  id = $1
+`
+
+func (q *Queries) UpgradeUserToChirpyRed(ctx context.Context, id uuid.UUID) (int64, error) {
+	result, err := q.db.ExecContext(ctx, upgradeUserToChirpyRed, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
